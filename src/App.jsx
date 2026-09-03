@@ -1,30 +1,31 @@
-import { useEffect, useState } from "react";
-import api from "./models/api";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "./context/AuthContext";
+import ProtectedRoute from "./routes/ProtectedRoute";
+import Login from "./views/pages/Login";
+import Dashboard from "./views/pages/Dashboard";
 
-function App() {
-  const [status, setStatus] = useState("checking...");
-  const [database, setDatabase] = useState("checking...");
-
-  useEffect(() => {
-    api
-      .get("/health")
-      .then((response) => {
-        setStatus(response.data.status);
-        setDatabase(response.data.database);
-      })
-  .catch(() => {
-  setStatus("backend unreachable");
-        setDatabase("unknown");
-      });
-  }, []);
-
+export default function App() {
   return (
-    <div style={{ padding: "40px", fontFamily: "sans-serif" }}>
-      <h1>Kora Fleet</h1>
-      <p>API status: {status}</p>
-      <p>Database: {database}</p>
-    </div>
+    <BrowserRouter>
+      <AuthProvider>
+        <Routes>
+          {/* Public */}
+          <Route path="/login" element={<Login />} />
+
+          {/* Protected */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Default redirect */}
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
-
-export default App;
