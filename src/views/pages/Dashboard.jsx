@@ -1,4 +1,3 @@
-// the dashboard,shows nothing for now , just proves login worked
 
 import { useAuth } from "../../context/AuthContext";
 

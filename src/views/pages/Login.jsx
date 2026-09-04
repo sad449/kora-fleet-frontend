@@ -1,4 +1,4 @@
-// the login page,a form with , email, password, submit.
+
 import { useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 
@@ -16,7 +16,7 @@ export default function Login() {
 
     try {
       await login(email, password);
-      // login() handles the redirect , nothing to do here on success
+     
     } catch (err) {
       setError("Invalid email or password.");
     } finally {
