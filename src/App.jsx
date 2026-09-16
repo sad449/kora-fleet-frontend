@@ -14,15 +14,11 @@ function ComingSoon({ title }) {
   const navigate = useNavigate();
   return (
     <div style={{ padding: "40px", fontFamily: "sans-serif" }}>
-      <button
-        type="button"
-        onClick={() => navigate(-1)}
-        style={{ marginBottom: "24px", padding: "8px 16px", backgroundColor: "#0f172a", color: "#fff", border: "none", cursor: "pointer" }}
-      >
+      <button type="button" onClick={() => navigate(-1)} style={{ marginBottom: "24px", padding: "8px 16px", backgroundColor: "#0f172a", color: "#fff", border: "none", cursor: "pointer" }}>
         ← Back
       </button>
       <h2 style={{ color: "#0f172a" }}>{title}</h2>
-      <p style={{ color: "#64748b", marginTop: "8px" }}>This section is being built. Check back soon.</p>
+      <p style={{ color: "#64748b", marginTop: "8px" }}>This section is being built.</p>
     </div>
   );
 }

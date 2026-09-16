@@ -1,197 +1,435 @@
 import { useEffect, useState } from "react";
-import { useAuth } from "../../context/AuthContext";
-import { useNavigate } from "react-router-dom";
-import { getUsers } from "../../models/userModel";
+import { getUsers, getRoles, createUser, deleteUser } from "../../models/userModel";
+import Layout from "../../components/Layout";
 
 export default function Dashboard() {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
   const [users, setUsers] = useState([]);
+  const [roles, setRoles] = useState([]);
+  const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const [form, setForm] = useState({
+    email: "",
+    password: "",
+    role_id: "",
+  });
 
   useEffect(() => {
-    getUsers()
-      .then(setUsers)
-      .catch(() => setError("Failed to load users."));
+    loadUsers();
+    loadRoles();
   }, []);
 
-  const activeUsers = users.filter(u => u.is_active);
+  async function loadUsers() {
+    try {
+      const data = await getUsers();
+      setUsers(data);
+    } catch {
+      setError("Failed to load users.");
+    }
+  }
+
+  async function loadRoles() {
+    try {
+      const data = await getRoles();
+      setRoles(data);
+    } catch {
+      setError("Failed to load roles.");
+    }
+  }
+
+  async function handleCreate(e) {
+    e.preventDefault();
+
+    setError("");
+    setSuccess("");
+
+    try {
+      await createUser({
+        email: form.email,
+        password: form.password,
+        role_id: parseInt(form.role_id),
+      });
+
+      setSuccess(`User ${form.email} created successfully.`);
+
+      setForm({
+        email: "",
+        password: "",
+        role_id: "",
+      });
+
+      setShowForm(false);
+
+      loadUsers();
+    } catch (err) {
+      setError(
+        err.response?.data?.detail || "Failed to create user."
+      );
+    }
+  }
+
+  async function handleDeactivate(id) {
+    if (!window.confirm("Deactivate this user?")) return;
+
+    try {
+      await deleteUser(id);
+      loadUsers();
+    } catch {
+      setError("Failed to deactivate user.");
+    }
+  }
+
+  function handleChange(e) {
+    setForm({
+      ...form,
+      [e.target.name]: e.target.value,
+    });
+  }
+
+  const activeUsers = users.filter((u) => u.is_active);
 
   return (
-    <div style={s.shell}>
-      <div style={s.sidebar}>
-        <div style={s.logoWrap}>
-          <img src="/logo.jpeg" alt="Kora Fleet" style={s.logo} />
-        </div>
-        <p style={s.brand}>KORA FLEET</p>
-      <button type="button" onClick={() => navigate("/dashboard")} style={s.navBtn}>
-  Dashboard
-</button>
-        <button onClick={() => navigate("/users")} style={s.navBtn}>
-          Users
+    <Layout>
+      <div style={s.header}>
+        <h2 style={s.title}>
+          {showForm ? "Add new user" : "Dashboard"}
+        </h2>
+
+        <button
+          type="button"
+          style={showForm ? s.cancelBtn : s.addBtn}
+          onClick={() => {
+            setShowForm(!showForm);
+            setError("");
+            setSuccess("");
+          }}
+        >
+          {showForm ? "← Back to dashboard" : "+ Add user"}
         </button>
       </div>
 
-      <div style={s.main}>
-        <div style={s.topbar}>
-          <h1 style={s.pageTitle}>Dashboard</h1>
-          <div style={s.topRight}>
-            <span style={s.whoami}>{user?.full_name}</span>
-            <button onClick={logout} style={s.logoutBtn}>Log out</button>
-          </div>
-        </div>
+      {success && <p style={s.success}>{success}</p>}
 
-        {error && <p style={s.error}>{error}</p>}
+      {error && <p style={s.error}>{error}</p>}
 
-        <div style={s.cards}>
-          <div style={s.card}>
-            <p style={s.cardLabel}>Active users</p>
-            <p style={s.cardNum}>{activeUsers.length}</p>
-          </div>
-          <div style={s.card}>
-            <p style={s.cardLabel}>Total users</p>
-            <p style={s.cardNum}>{users.length}</p>
-          </div>
-        </div>
+      {showForm ? (
+        /* =========================
+           ADD USER FORM
+        ========================== */
+        <div style={s.formWrap}>
+          <h3 style={s.formTitle}>Add new user</h3>
 
-        <div style={s.section}>
-          <div style={s.sectionHeader}>
-            <h2 style={s.sectionTitle}>Active users</h2>
-            <button onClick={() => navigate("/users")} style={s.addBtn}>
-              + Add user
+          <p style={s.formNote}>
+            Set the email and a temporary password. The user will set
+            their own password and complete their profile on first login.
+          </p>
+
+          <form onSubmit={handleCreate}>
+            <div style={s.row}>
+              <div style={s.field}>
+                <label style={s.label}>Email</label>
+
+                <input
+                  name="email"
+                  type="email"
+                  value={form.email}
+                  onChange={handleChange}
+                  style={s.input}
+                  required
+                  placeholder="user@example.com"
+                />
+              </div>
+
+              <div style={s.field}>
+                <label style={s.label}>
+                  Temporary password
+                </label>
+
+                <input
+                  name="password"
+                  type="text"
+                  value={form.password}
+                  onChange={handleChange}
+                  style={s.input}
+                  required
+                  placeholder="e.g. Kora2026!"
+                />
+              </div>
+
+              <div style={s.field}>
+                <label style={s.label}>Role</label>
+
+                <select
+                  name="role_id"
+                  value={form.role_id}
+                  onChange={handleChange}
+                  style={s.input}
+                  required
+                >
+                  <option value="">Select role</option>
+
+                  {roles.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <button type="submit" style={s.submitBtn}>
+              Create user
             </button>
+          </form>
+        </div>
+      ) : (
+        /* =========================
+           NORMAL DASHBOARD
+        ========================== */
+        <>
+          <div style={s.cards}>
+            <div style={s.card}>
+              <p style={s.cardLabel}>Active users</p>
+              <p style={s.cardNum}>{activeUsers.length}</p>
+            </div>
+
+            <div style={s.card}>
+              <p style={s.cardLabel}>Total users</p>
+              <p style={s.cardNum}>{users.length}</p>
+            </div>
           </div>
 
-          {activeUsers.length === 0 ? (
-            <p style={s.empty}>No users yet. Click Add user to create one.</p>
-          ) : (
+          <div style={s.tableWrap}>
+            <h3 style={s.sectionTitle}>Active users</h3>
+
             <table style={s.table}>
               <thead>
-                <tr style={{ backgroundColor: "#f1f5f9" }}>
+                <tr>
                   <th style={s.th}>Name</th>
                   <th style={s.th}>Email</th>
                   <th style={s.th}>Role</th>
                   <th style={s.th}>Type</th>
+                  <th style={s.th}>Profile</th>
                   <th style={s.th}>Status</th>
+                  <th style={s.th}>Action</th>
                 </tr>
               </thead>
+
               <tbody>
-                {activeUsers.map((u, i) => (
-                  <tr key={u.id} style={{ backgroundColor: i % 2 === 0 ? "#ffffff" : "#f8fafc" }}>
-                    <td style={s.td}>{u.first_name} {u.last_name}</td>
-                    <td style={s.td}>{u.email}</td>
-                    <td style={s.td}>{u.role_id}</td>
-                    <td style={s.td}>{u.account_type}</td>
-                    <td style={s.td}>
-                      <span style={s.badge}>Active</span>
+                {users.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={7}
+                      style={{
+                        ...s.td,
+                        textAlign: "center",
+                        color: "#94a3b8",
+                        padding: "32px",
+                      }}
+                    >
+                      No users yet.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  users.map((u, i) => (
+                    <tr
+                      key={u.id}
+                      style={{
+                        backgroundColor:
+                          i % 2 === 0 ? "#fff" : "#f8fafc",
+                      }}
+                    >
+                      <td style={s.td}>
+                        {u.first_name || u.last_name ? (
+                          `${u.first_name || ""} ${
+                            u.last_name || ""
+                          }`.trim()
+                        ) : (
+                          <span
+                            style={{
+                              color: "#94a3b8",
+                              fontStyle: "italic",
+                            }}
+                          >
+                            Not set
+                          </span>
+                        )}
+                      </td>
+
+                      <td style={s.td}>{u.email}</td>
+
+                      <td style={s.td}>{u.role_id}</td>
+
+                      <td style={s.td}>{u.account_type}</td>
+
+                      <td style={s.td}>
+                        {u.profile_completed ? (
+                          <span style={s.badgeGreen}>
+                            Complete
+                          </span>
+                        ) : (
+                          <span style={s.badgeGrey}>
+                            Pending
+                          </span>
+                        )}
+                      </td>
+
+                      <td style={s.td}>
+                        {u.is_active ? (
+                          <span style={s.badgeGreen}>
+                            Active
+                          </span>
+                        ) : (
+                          <span style={s.badgeRed}>
+                            Inactive
+                          </span>
+                        )}
+                      </td>
+
+                      <td style={s.td}>
+                        {u.role_id !== 1 && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleDeactivate(u.id)
+                            }
+                            style={s.deactivateBtn}
+                          >
+                            Deactivate
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
-          )}
-        </div>
-      </div>
-    </div>
+          </div>
+        </>
+      )}
+    </Layout>
   );
 }
 
 const s = {
-  shell: {
-    display: "flex",
-    minHeight: "100vh",
-    fontFamily: "sans-serif",
-    backgroundColor: "#f8fafc",
-  },
-  sidebar: {
-    width: "210px",
-    backgroundColor: "#0f172a",
-    padding: "20px 16px",
-    display: "flex",
-    flexDirection: "column",
-    gap: "4px",
-    flexShrink: 0,
-  },
-  logoWrap: {
-    marginBottom: "16px",
-    display: "flex",
-    justifyContent: "center",
-  },
-  logo: {
-    width: "80px",
-    height: "80px",
-    objectFit: "contain",
-    borderRadius: "4px",
-  },
-  brand: {
-    color: "#94a3b8",
-    fontSize: "11px",
-    fontWeight: "700",
-    letterSpacing: "1.5px",
-    margin: "0 0 16px 0",
-    textAlign: "center",
-  },
-  navBtn: {
-    padding: "10px 14px",
-    backgroundColor: "transparent",
-    color: "#e2e8f0",
-    border: "none",
-    cursor: "pointer",
-    textAlign: "left",
-    fontSize: "14px",
-  },
-  main: {
-    flex: 1,
-    display: "flex",
-    flexDirection: "column",
-    backgroundColor: "#f8fafc",
-  },
-  topbar: {
+  header: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: "20px 32px",
-    backgroundColor: "#ffffff",
-    borderBottom: "1px solid #e2e8f0",
+    marginBottom: "24px",
   },
-  pageTitle: {
+
+  title: {
     margin: 0,
-    fontSize: "18px",
+    fontSize: "20px",
     color: "#0f172a",
   },
-  topRight: {
-    display: "flex",
-    alignItems: "center",
-    gap: "16px",
-  },
-  whoami: {
-    fontSize: "14px",
-    color: "#475569",
-  },
-  logoutBtn: {
-    padding: "7px 16px",
+
+  addBtn: {
+    padding: "9px 20px",
     backgroundColor: "#0f172a",
     color: "#fff",
     border: "none",
     cursor: "pointer",
+    fontSize: "14px",
+  },
+
+  cancelBtn: {
+    padding: "9px 20px",
+    backgroundColor: "transparent",
+    color: "#475569",
+    border: "1px solid #cbd5e1",
+    cursor: "pointer",
+    fontSize: "14px",
+  },
+
+  success: {
+    backgroundColor: "#dcfce7",
+    color: "#166534",
+    padding: "12px 16px",
+    marginBottom: "16px",
     fontSize: "13px",
   },
+
   error: {
-    color: "#dc2626",
-    padding: "16px 32px",
+    backgroundColor: "#fee2e2",
+    color: "#991b1b",
+    padding: "12px 16px",
+    marginBottom: "16px",
     fontSize: "13px",
   },
+
+  formWrap: {
+    backgroundColor: "#fff",
+    border: "1px solid #e2e8f0",
+    padding: "24px",
+    maxWidth: "100%",
+  },
+
+  formTitle: {
+    margin: "0 0 8px 0",
+    fontSize: "16px",
+    color: "#0f172a",
+  },
+
+  formNote: {
+    margin: "0 0 20px 0",
+    fontSize: "13px",
+    color: "#64748b",
+    lineHeight: "1.6",
+  },
+
+  row: {
+    display: "flex",
+    gap: "16px",
+    marginBottom: "16px",
+  },
+
+  field: {
+    display: "flex",
+    flexDirection: "column",
+    flex: 1,
+  },
+
+  label: {
+    fontSize: "12px",
+    fontWeight: "600",
+    color: "#0f172a",
+    marginBottom: "6px",
+  },
+
+  input: {
+    padding: "9px",
+    border: "1px solid #cbd5e1",
+    fontSize: "14px",
+    outline: "none",
+    backgroundColor: "#fff",
+    color: "#0f172a",
+  },
+
+  submitBtn: {
+    padding: "10px 24px",
+    backgroundColor: "#0f172a",
+    color: "#fff",
+    border: "none",
+    cursor: "pointer",
+    fontSize: "14px",
+  },
+
   cards: {
     display: "flex",
     gap: "16px",
-    padding: "28px 32px 0",
+    marginBottom: "28px",
   },
+
   card: {
-    backgroundColor: "#ffffff",
+    backgroundColor: "#fff",
     border: "1px solid #e2e8f0",
     padding: "20px 28px",
     minWidth: "160px",
   },
+
   cardLabel: {
     margin: "0 0 8px 0",
     fontSize: "12px",
@@ -200,43 +438,32 @@ const s = {
     textTransform: "uppercase",
     letterSpacing: "0.5px",
   },
+
   cardNum: {
     margin: 0,
     fontSize: "32px",
     fontWeight: "700",
     color: "#0f172a",
   },
-  section: {
-    margin: "28px 32px",
+
+  tableWrap: {
+    backgroundColor: "#fff",
+    border: "1px solid #e2e8f0",
   },
-  sectionHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "16px",
-  },
+
   sectionTitle: {
     margin: 0,
-    fontSize: "16px",
+    padding: "16px 20px",
+    fontSize: "15px",
     color: "#0f172a",
+    borderBottom: "1px solid #e2e8f0",
   },
-  addBtn: {
-    padding: "8px 18px",
-    backgroundColor: "#0f172a",
-    color: "#fff",
-    border: "none",
-    cursor: "pointer",
-    fontSize: "13px",
-  },
-  empty: {
-    color: "#94a3b8",
-    fontSize: "14px",
-  },
+
   table: {
     width: "100%",
     borderCollapse: "collapse",
-    border: "1px solid #e2e8f0",
   },
+
   th: {
     textAlign: "left",
     padding: "11px 14px",
@@ -246,18 +473,46 @@ const s = {
     fontWeight: "700",
     textTransform: "uppercase",
     letterSpacing: "0.5px",
+    backgroundColor: "#f1f5f9",
   },
+
   td: {
     padding: "11px 14px",
     borderBottom: "1px solid #e2e8f0",
     fontSize: "14px",
     color: "#334155",
   },
-  badge: {
+
+  badgeGreen: {
     backgroundColor: "#dcfce7",
     color: "#166534",
     padding: "3px 10px",
     fontSize: "12px",
     fontWeight: "600",
+  },
+
+  badgeGrey: {
+    backgroundColor: "#f1f5f9",
+    color: "#475569",
+    padding: "3px 10px",
+    fontSize: "12px",
+    fontWeight: "600",
+  },
+
+  badgeRed: {
+    backgroundColor: "#fee2e2",
+    color: "#991b1b",
+    padding: "3px 10px",
+    fontSize: "12px",
+    fontWeight: "600",
+  },
+
+  deactivateBtn: {
+    padding: "5px 12px",
+    backgroundColor: "#dc2626",
+    color: "#fff",
+    border: "none",
+    cursor: "pointer",
+    fontSize: "12px",
   },
 };

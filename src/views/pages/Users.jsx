@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { getUsers, getRoles, createUser, deleteUser } from "../../models/userModel";
+import Layout from "../../components/Layout";
 
 export default function Users() {
-  const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState([]);
   const [showForm, setShowForm] = useState(false);
@@ -48,7 +47,7 @@ export default function Users() {
         password: form.password,
         role_id: parseInt(form.role_id),
       });
-      setSuccess(`User ${form.email} created. They can now log in with the temporary password.`);
+      setSuccess(`User ${form.email} created. Share the temporary password with them.`);
       setShowForm(false);
       setForm({ email: "", password: "", role_id: "" });
       loadUsers();
@@ -57,7 +56,7 @@ export default function Users() {
     }
   }
 
-  async function handleDelete(id) {
+  async function handleDeactivate(id) {
     if (!window.confirm("Deactivate this user? They will no longer be able to log in.")) return;
     try {
       await deleteUser(id);
@@ -72,27 +71,30 @@ export default function Users() {
   }
 
   return (
-    <div style={s.page}>
-      <div style={s.topbar}>
-        <div style={s.topLeft}>
-          <button onClick={() => navigate("/dashboard")} style={s.backBtn}>
-            ← Dashboard
-          </button>
-          <h2 style={s.title}>Users</h2>
-        </div>
-        <button style={s.addBtn} onClick={() => { setShowForm(!showForm); setError(""); setSuccess(""); }}>
-          {showForm ? "Cancel" : "+ Add user"}
+    <Layout>
+      <div style={s.header}>
+        <h2 style={s.title}>{showForm ? "Add new user" : "Users"}</h2>
+        <button
+          type="button"
+          style={showForm ? s.cancelBtn : s.addBtn}
+          onClick={() => {
+            setShowForm(!showForm);
+            setError("");
+            setSuccess("");
+          }}
+        >
+          {showForm ? "← Back to users" : "+ Add user"}
         </button>
       </div>
 
       {success && <p style={s.success}>{success}</p>}
       {error && <p style={s.error}>{error}</p>}
 
-      {showForm && (
+      {showForm ? (
         <div style={s.formWrap}>
-          <h3 style={s.formTitle}>Create new user</h3>
           <p style={s.formNote}>
-            Enter the user's email and a temporary password. They will be prompted to change their password and complete their profile when they first log in.
+            Enter the email and a temporary password. The user will set their own
+            password and complete their profile on first login.
           </p>
           <form onSubmit={handleSubmit}>
             <div style={s.row}>
@@ -139,100 +141,89 @@ export default function Users() {
             <button type="submit" style={s.submitBtn}>Create user</button>
           </form>
         </div>
-      )}
-
-      <div style={s.tableWrap}>
-        <table style={s.table}>
-          <thead>
-            <tr style={{ backgroundColor: "#f1f5f9" }}>
-              <th style={s.th}>Name</th>
-              <th style={s.th}>Email</th>
-              <th style={s.th}>Role</th>
-              <th style={s.th}>Account type</th>
-              <th style={s.th}>Profile</th>
-              <th style={s.th}>Status</th>
-              <th style={s.th}>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.length === 0 ? (
+      ) : (
+        <div style={s.tableWrap}>
+          <table style={s.table}>
+            <thead>
               <tr>
-                <td colSpan={7} style={{ ...s.td, color: "#94a3b8", textAlign: "center", padding: "32px" }}>
-                  No users yet. Click + Add user to create one.
-                </td>
+                <th style={s.th}>Name</th>
+                <th style={s.th}>Email</th>
+                <th style={s.th}>Role</th>
+                <th style={s.th}>Type</th>
+                <th style={s.th}>Profile</th>
+                <th style={s.th}>Status</th>
+                <th style={s.th}>Action</th>
               </tr>
-            ) : (
-              users.map((u, i) => (
-                <tr key={u.id} style={{ backgroundColor: i % 2 === 0 ? "#ffffff" : "#f8fafc" }}>
-                  <td style={s.td}>
-                    {u.first_name || u.last_name
-                      ? `${u.first_name || ""} ${u.last_name || ""}`.trim()
-                      : <span style={{ color: "#94a3b8", fontStyle: "italic" }}>Not set yet</span>
-                    }
-                  </td>
-                  <td style={s.td}>{u.email}</td>
-                  <td style={s.td}>{u.role_id}</td>
-                  <td style={s.td}>{u.account_type}</td>
-                  <td style={s.td}>
-                    {u.profile_completed
-                      ? <span style={s.badgeGreen}>Complete</span>
-                      : <span style={s.badgeGrey}>Pending</span>
-                    }
-                  </td>
-                  <td style={s.td}>
-                    {u.is_active
-                      ? <span style={s.badgeGreen}>Active</span>
-                      : <span style={s.badgeRed}>Inactive</span>
-                    }
-                  </td>
-                  <td style={s.td}>
-                    {u.role_id !== 1 && (
-                      <button onClick={() => handleDelete(u.id)} style={s.deleteBtn}>
-                        Deactivate
-                      </button>
-                    )}
+            </thead>
+            <tbody>
+              {users.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={7}
+                    style={{ ...s.td, textAlign: "center", color: "#94a3b8", padding: "32px" }}
+                  >
+                    No users yet. Click + Add user to create one.
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
+              ) : (
+                users.map((u, i) => (
+                  <tr
+                    key={u.id}
+                    style={{ backgroundColor: i % 2 === 0 ? "#ffffff" : "#f8fafc" }}
+                  >
+                    <td style={s.td}>
+                      {u.first_name || u.last_name
+                        ? `${u.first_name || ""} ${u.last_name || ""}`.trim()
+                        : <span style={{ color: "#94a3b8", fontStyle: "italic" }}>Not set yet</span>
+                      }
+                    </td>
+                    <td style={s.td}>{u.email}</td>
+                    <td style={s.td}>{u.role_id}</td>
+                    <td style={s.td}>{u.account_type}</td>
+                    <td style={s.td}>
+                      {u.profile_completed
+                        ? <span style={s.badgeGreen}>Complete</span>
+                        : <span style={s.badgeGrey}>Pending</span>
+                      }
+                    </td>
+                    <td style={s.td}>
+                      {u.is_active
+                        ? <span style={s.badgeGreen}>Active</span>
+                        : <span style={s.badgeRed}>Inactive</span>
+                      }
+                    </td>
+                    <td style={s.td}>
+                      {u.role_id !== 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeactivate(u.id)}
+                          style={s.deactivateBtn}
+                        >
+                          Deactivate
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Layout>
   );
 }
 
 const s = {
-  page: {
-    padding: "0",
-    fontFamily: "sans-serif",
-    backgroundColor: "#f8fafc",
-    minHeight: "100vh",
-  },
-  topbar: {
+  header: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: "20px 32px",
-    backgroundColor: "#ffffff",
-    borderBottom: "1px solid #e2e8f0",
-  },
-  topLeft: {
-    display: "flex",
-    alignItems: "center",
-    gap: "16px",
-  },
-  backBtn: {
-    padding: "7px 14px",
-    backgroundColor: "transparent",
-    color: "#475569",
-    border: "1px solid #e2e8f0",
-    cursor: "pointer",
-    fontSize: "13px",
+    marginBottom: "24px",
   },
   title: {
     margin: 0,
-    fontSize: "18px",
+    fontSize: "20px",
     color: "#0f172a",
   },
   addBtn: {
@@ -243,35 +234,36 @@ const s = {
     cursor: "pointer",
     fontSize: "14px",
   },
+  cancelBtn: {
+    padding: "9px 20px",
+    backgroundColor: "transparent",
+    color: "#475569",
+    border: "1px solid #cbd5e1",
+    cursor: "pointer",
+    fontSize: "14px",
+  },
   success: {
     backgroundColor: "#dcfce7",
     color: "#166534",
-    padding: "12px 32px",
-    margin: 0,
+    padding: "12px 16px",
+    marginBottom: "16px",
     fontSize: "13px",
-    borderBottom: "1px solid #bbf7d0",
   },
   error: {
     backgroundColor: "#fee2e2",
     color: "#991b1b",
-    padding: "12px 32px",
-    margin: 0,
+    padding: "12px 16px",
+    marginBottom: "16px",
     fontSize: "13px",
-    borderBottom: "1px solid #fecaca",
   },
   formWrap: {
-    margin: "24px 32px",
-    backgroundColor: "#ffffff",
+    backgroundColor: "#fff",
     border: "1px solid #e2e8f0",
-    padding: "24px",
-  },
-  formTitle: {
-    margin: "0 0 8px 0",
-    fontSize: "16px",
-    color: "#0f172a",
+    padding: "28px",
+    maxWidth: "860px",
   },
   formNote: {
-    margin: "0 0 20px 0",
+    margin: "0 0 24px 0",
     fontSize: "13px",
     color: "#64748b",
     lineHeight: "1.6",
@@ -279,7 +271,7 @@ const s = {
   row: {
     display: "flex",
     gap: "16px",
-    marginBottom: "16px",
+    marginBottom: "20px",
   },
   field: {
     display: "flex",
@@ -297,10 +289,11 @@ const s = {
     border: "1px solid #cbd5e1",
     fontSize: "14px",
     outline: "none",
-    backgroundColor: "#ffffff",
+    backgroundColor: "#fff",
+    color: "#0f172a",
   },
   submitBtn: {
-    padding: "10px 24px",
+    padding: "10px 28px",
     backgroundColor: "#0f172a",
     color: "#fff",
     border: "none",
@@ -308,13 +301,12 @@ const s = {
     fontSize: "14px",
   },
   tableWrap: {
-    margin: "24px 32px",
+    backgroundColor: "#fff",
+    border: "1px solid #e2e8f0",
   },
   table: {
     width: "100%",
     borderCollapse: "collapse",
-    border: "1px solid #e2e8f0",
-    backgroundColor: "#ffffff",
   },
   th: {
     textAlign: "left",
@@ -325,6 +317,7 @@ const s = {
     fontWeight: "700",
     textTransform: "uppercase",
     letterSpacing: "0.5px",
+    backgroundColor: "#f1f5f9",
   },
   td: {
     padding: "11px 14px",
@@ -353,7 +346,7 @@ const s = {
     fontSize: "12px",
     fontWeight: "600",
   },
-  deleteBtn: {
+  deactivateBtn: {
     padding: "5px 12px",
     backgroundColor: "#dc2626",
     color: "#fff",
