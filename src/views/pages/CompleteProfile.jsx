@@ -1,12 +1,15 @@
 import { useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import api from "../../models/api";
+import "../../styles/CompleteProfile.css";
 
 export default function CompleteProfile() {
-  const { user, refreshUser, navigateByRole } = useAuth();
+  const { refreshUser, navigateByRole } = useAuth();
   const [step, setStep] = useState(1);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadedFile, setUploadedFile] = useState("");
 
   const [personal, setPersonal] = useState({
     first_name: "",
@@ -18,9 +21,9 @@ export default function CompleteProfile() {
 
   const [company, setCompany] = useState({
     company_name: "",
+    company_type: "solo",
     company_registered_date: "",
     rdb_certificate: "",
-    status: "limited_company",
     address: "",
     phone: "",
   });
@@ -36,18 +39,42 @@ export default function CompleteProfile() {
 
     setLoading(true);
     try {
-      const result = await api.post("/auth/personal-details", personal);
-
-      if (result.data.account_type === "individual") {
-        const updated = await refreshUser();
-        navigateByRole(updated.role_id);
-      } else {
-        setStep(2);
-      }
+      await api.post("/auth/personal-details", personal);
+      setStep(2);
     } catch (err) {
-      setError(err.response?.data?.detail || "Failed to save details.");
+      setError(err.response?.data?.detail || "Failed to save personal details.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleFileUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const allowed = ["application/pdf", "image/jpeg", "image/png"];
+    if (!allowed.includes(file.type)) {
+      setError("Only PDF, JPG, and PNG files are allowed.");
+      return;
+    }
+
+    setUploading(true);
+    setError("");
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await api.post("/auth/upload-certificate", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      setUploadedFile(response.data.filename);
+      setCompany({ ...company, rdb_certificate: response.data.filename });
+    } catch (err) {
+      setError("Failed to upload file. Try again.");
+    } finally {
+      setUploading(false);
     }
   }
 
@@ -73,151 +100,153 @@ export default function CompleteProfile() {
   }
 
   return (
-    <div style={s.page}>
-      <div style={s.card}>
-        <img src="/logo.jpeg" alt="Kora Fleet" style={s.logo} />
+    <div className="cp-page">
+      <div className="cp-card">
+        <img src="/logo.jpeg" alt="Kora Fleet" className="cp-logo" />
 
         {step === 1 ? (
           <>
-            <h2 style={s.title}>Personal details</h2>
-            <p style={s.sub}>
-              Tell us about yourself before you get started.
-              {user?.account_type === "company" && (
-                <span style={s.stepIndicator}> Step 1 of 2</span>
-              )}
+            <h2 className="cp-title">Personal details</h2>
+            <p className="cp-sub">
+              Fill in your personal information.{" "}
+              <span className="cp-step">Step 1 of 2</span>
             </p>
 
-            <form onSubmit={handlePersonalSubmit} style={s.form}>
-              <div style={s.row}>
-                <div style={s.field}>
-                  <label style={s.label}>First name</label>
+            <form onSubmit={handlePersonalSubmit} className="cp-form">
+              <div className="cp-row">
+                <div className="cp-field">
+                  <label className="cp-label">First name</label>
                   <input
+                    className="cp-input"
                     value={personal.first_name}
                     onChange={e => setPersonal({ ...personal, first_name: e.target.value })}
-                    style={s.input}
                     required
                     placeholder="John"
                   />
                 </div>
-                <div style={s.field}>
-                  <label style={s.label}>Last name</label>
+                <div className="cp-field">
+                  <label className="cp-label">Last name</label>
                   <input
+                    className="cp-input"
                     value={personal.last_name}
                     onChange={e => setPersonal({ ...personal, last_name: e.target.value })}
-                    style={s.input}
                     required
                     placeholder="Doe"
                   />
                 </div>
               </div>
 
-              <label style={s.label}>Phone</label>
+              <label className="cp-label">Phone</label>
               <input
+                className="cp-input"
                 value={personal.phone}
                 onChange={e => setPersonal({ ...personal, phone: e.target.value })}
-                style={s.input}
                 placeholder="+250 7XX XXX XXX"
               />
 
-              <label style={s.label}>National ID number</label>
+              <label className="cp-label">National ID number</label>
               <input
+                className="cp-input"
                 value={personal.national_id_number}
                 onChange={e => setPersonal({ ...personal, national_id_number: e.target.value })}
-                style={s.input}
                 placeholder="1199012345678901"
               />
 
-              <label style={s.label}>Address</label>
+              <label className="cp-label">Address</label>
               <input
+                className="cp-input"
                 value={personal.address}
                 onChange={e => setPersonal({ ...personal, address: e.target.value })}
-                style={s.input}
                 placeholder="KG 123 St, Kigali"
               />
 
-              {error && <p style={s.error}>{error}</p>}
+              {error && <p className="cp-error">{error}</p>}
 
-              <button type="submit" style={s.btn} disabled={loading}>
-                {loading
-                  ? "Saving..."
-                  : user?.account_type === "company"
-                  ? "Next →"
-                  : "Save and continue"
-                }
-              </button>
+              <div className="cp-btn-row">
+                <button type="submit" className="cp-btn" disabled={loading}>
+                  {loading ? "Saving..." : "Next →"}
+                </button>
+              </div>
             </form>
           </>
         ) : (
           <>
-            <h2 style={s.title}>Company profile</h2>
-            <p style={s.sub}>
-              Enter your company details. <span style={s.stepIndicator}>Step 2 of 2</span>
+            <h2 className="cp-title">Company profile</h2>
+            <p className="cp-sub">
+              Enter your company details.{" "}
+              <span className="cp-step">Step 2 of 2</span>
             </p>
 
-            <form onSubmit={handleCompanySubmit} style={s.form}>
-              <label style={s.label}>Company name</label>
+            <form onSubmit={handleCompanySubmit} className="cp-form">
+              <label className="cp-label">Company name</label>
               <input
+                className="cp-input"
                 value={company.company_name}
                 onChange={e => setCompany({ ...company, company_name: e.target.value })}
-                style={s.input}
                 required
                 placeholder="Kigali Logistics Ltd"
               />
 
-              <label style={s.label}>Company type</label>
+              <label className="cp-label">Company type</label>
               <select
-                value={company.status}
-                onChange={e => setCompany({ ...company, status: e.target.value })}
-                style={s.input}
+                className="cp-select"
+                value={company.company_type}
+                onChange={e => setCompany({ ...company, company_type: e.target.value })}
               >
-                <option value="sole_proprietorship">Sole proprietorship</option>
-                <option value="limited_company">Limited company</option>
-                <option value="partnership">Partnership</option>
+                <option value="solo">Solo — fully owned</option>
+                <option value="company">Company — has shareholders</option>
               </select>
 
-              <label style={s.label}>Company registered date</label>
+              <label className="cp-label">Company registered date</label>
               <input
+                type="date"
+                className="cp-input"
                 value={company.company_registered_date}
                 onChange={e => setCompany({ ...company, company_registered_date: e.target.value })}
-                style={s.input}
-                placeholder="e.g. 2020-01-15"
               />
 
-              <label style={s.label}>RDB certificate number</label>
-              <input
-                value={company.rdb_certificate}
-                onChange={e => setCompany({ ...company, rdb_certificate: e.target.value })}
-                style={s.input}
-                placeholder="RDB/2020/XXXXX"
-              />
+              <div className="cp-file-wrap">
+                <label className="cp-file-label">RDB certificate</label>
+                <input
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  onChange={handleFileUpload}
+                  className="cp-file-input"
+                />
+                <p className="cp-file-note">PDF, JPG, or PNG. Max 5MB.</p>
+                {uploading && <p className="cp-uploading">Uploading...</p>}
+                {uploadedFile && !uploading && (
+                  <p className="cp-uploaded">✓ File uploaded: {uploadedFile}</p>
+                )}
+              </div>
 
-              <label style={s.label}>Company address</label>
+              <label className="cp-label">Company address</label>
               <input
+                className="cp-input"
                 value={company.address}
                 onChange={e => setCompany({ ...company, address: e.target.value })}
-                style={s.input}
                 placeholder="KG 123 St, Kigali"
               />
 
-              <label style={s.label}>Company phone</label>
+              <label className="cp-label">Company phone</label>
               <input
+                className="cp-input"
                 value={company.phone}
                 onChange={e => setCompany({ ...company, phone: e.target.value })}
-                style={s.input}
                 placeholder="+250 7XX XXX XXX"
               />
 
-              {error && <p style={s.error}>{error}</p>}
+              {error && <p className="cp-error">{error}</p>}
 
-              <div style={s.btnRow}>
+              <div className="cp-btn-row">
                 <button
                   type="button"
+                  className="cp-back-btn"
                   onClick={() => { setStep(1); setError(""); }}
-                  style={s.backBtn}
                 >
                   ← Back
                 </button>
-                <button type="submit" style={s.btn} disabled={loading}>
+                <button type="submit" className="cp-btn" disabled={loading || uploading}>
                   {loading ? "Saving..." : "Save and continue"}
                 </button>
               </div>
@@ -228,100 +257,3 @@ export default function CompleteProfile() {
     </div>
   );
 }
-
-const s = {
-  page: {
-    minHeight: "100vh",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#f4f4f4",
-    fontFamily: "sans-serif",
-  },
-  card: {
-    backgroundColor: "#fff",
-    padding: "40px",
-    width: "480px",
-    border: "1px solid #ccc",
-  },
-  logo: {
-    width: "60px",
-    height: "60px",
-    objectFit: "contain",
-    marginBottom: "16px",
-    display: "block",
-  },
-  title: {
-    margin: "0 0 8px 0",
-    fontSize: "20px",
-    color: "#0f172a",
-  },
-  sub: {
-    margin: "0 0 24px 0",
-    fontSize: "13px",
-    color: "#64748b",
-    lineHeight: "1.5",
-  },
-  stepIndicator: {
-    color: "#0f9488",
-    fontWeight: "600",
-  },
-  form: {
-    display: "flex",
-    flexDirection: "column",
-  },
-  row: {
-    display: "flex",
-    gap: "12px",
-  },
-  field: {
-    display: "flex",
-    flexDirection: "column",
-    flex: 1,
-  },
-  label: {
-    fontSize: "12px",
-    fontWeight: "600",
-    color: "#0f172a",
-    marginBottom: "6px",
-    marginTop: "14px",
-  },
-  input: {
-    padding: "10px",
-    border: "1px solid #ccc",
-    fontSize: "14px",
-    outline: "none",
-    backgroundColor: "#fff",
-    color: "#0f172a",
-  },
-  error: {
-    color: "#dc2626",
-    fontSize: "13px",
-    marginTop: "12px",
-  },
-  btnRow: {
-    display: "flex",
-    gap: "12px",
-    marginTop: "20px",
-  },
-  btn: {
-    flex: 1,
-    padding: "11px",
-    backgroundColor: "#0f172a",
-    color: "#fff",
-    border: "none",
-    fontSize: "15px",
-    cursor: "pointer",
-    fontWeight: "600",
-    marginTop: "20px",
-  },
-  backBtn: {
-    padding: "11px 20px",
-    backgroundColor: "transparent",
-    color: "#475569",
-    border: "1px solid #cbd5e1",
-    fontSize: "14px",
-    cursor: "pointer",
-    marginTop: "20px",
-  },
-};

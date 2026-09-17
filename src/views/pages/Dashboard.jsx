@@ -98,14 +98,14 @@ export default function Dashboard() {
 
         <button
           type="button"
-          style={showForm ? s.cancelBtn : s.addBtn}
+          
           onClick={() => {
             setShowForm(!showForm);
             setError("");
             setSuccess("");
           }}
         >
-          {showForm ? "← Back to dashboard" : "+ Add user"}
+          
         </button>
       </div>
 
