@@ -1,43 +1,36 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { KeyRound, Eye, EyeOff } from "lucide-react";
 import api from "../../models/api";
 
 export default function SetPassword() {
-  const { user, refreshUser } = useAuth();
+  const { refreshUser } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({ old_password: "", new_password: "", confirm: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showNew, setShowNew] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
-
     if (form.new_password !== form.confirm) {
       setError("New passwords do not match.");
       return;
     }
-
     if (form.new_password.length < 6) {
-      setError("New password must be at least 6 characters.");
+      setError("Password must be at least 6 characters.");
       return;
     }
-
     setLoading(true);
     try {
       await api.post("/auth/change-password", {
         old_password: form.old_password,
         new_password: form.new_password,
       });
-
-      const updated = await refreshUser();
-
-      if (!updated.profile_completed) {
-        navigate("/complete-profile");
-      } else {
-        navigate("/dashboard");
-      }
+      await refreshUser();
+      navigate("/complete-profile");
     } catch (err) {
       setError(err.response?.data?.detail || "Failed to change password.");
     } finally {
@@ -46,58 +39,88 @@ export default function SetPassword() {
   }
 
   return (
-    <div style={s.page}>
-      <div style={s.card}>
-        <h2 style={s.title}>Set your password</h2>
-        <p style={s.sub}>You are logging in for the first time. Please set a new password before continuing.</p>
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-5 font-sans">
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-lg shadow-slate-100 p-10 w-full max-w-md">
 
-        <form onSubmit={handleSubmit} style={s.form}>
-          <label style={s.label}>Current password</label>
-          <input
-            type="password"
-            value={form.old_password}
-            onChange={e => setForm({ ...form, old_password: e.target.value })}
-            style={s.input}
-            required
-          />
+        <div className="flex items-center gap-3 mb-7">
+          <img src="/logo.jpeg" alt="Kora Fleet" className="w-10 h-10 rounded-xl object-contain" />
+          <div>
+            <p className="text-sm font-bold text-slate-900">Kora Fleet</p>
+            <p className="text-xs text-slate-400">First time login</p>
+          </div>
+        </div>
 
-          <label style={s.label}>New password</label>
-          <input
-            type="password"
-            value={form.new_password}
-            onChange={e => setForm({ ...form, new_password: e.target.value })}
-            style={s.input}
-            required
-          />
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center">
+            <KeyRound size={18} className="text-slate-600" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">Set your password</h2>
+            <p className="text-xs text-slate-500">Choose a strong password to continue</p>
+          </div>
+        </div>
 
-          <label style={s.label}>Confirm new password</label>
-          <input
-            type="password"
-            value={form.confirm}
-            onChange={e => setForm({ ...form, confirm: e.target.value })}
-            style={s.input}
-            required
-          />
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-600 text-slate-600">Current password</label>
+            <input
+              type="password"
+              value={form.old_password}
+              onChange={e => setForm({ ...form, old_password: e.target.value })}
+              className="px-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all"
+              required
+              placeholder="Your temporary password"
+            />
+          </div>
 
-          {error && <p style={s.error}>{error}</p>}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-600 text-slate-600">New password</label>
+            <div className="relative">
+              <input
+                type={showNew ? "text" : "password"}
+                value={form.new_password}
+                onChange={e => setForm({ ...form, new_password: e.target.value })}
+                className="w-full px-3 py-2.5 pr-10 border border-slate-200 rounded-lg text-sm outline-none text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all"
+                required
+                placeholder="At least 6 characters"
+              />
+              <button
+                type="button"
+                onClick={() => setShowNew(!showNew)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                {showNew ? <EyeOff size={15} /> : <Eye size={15} />}
+              </button>
+            </div>
+          </div>
 
-          <button type="submit" style={s.btn} disabled={loading}>
-            {loading ? "Saving..." : "Set password"}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-600 text-slate-600">Confirm new password</label>
+            <input
+              type="password"
+              value={form.confirm}
+              onChange={e => setForm({ ...form, confirm: e.target.value })}
+              className="px-3 py-2.5 border border-slate-200 rounded-lg text-sm outline-none text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all"
+              required
+              placeholder="Repeat your new password"
+            />
+          </div>
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="mt-1 py-3 bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-slate-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {loading ? "Saving..." : "Set password and continue"}
           </button>
         </form>
       </div>
     </div>
   );
 }
-
-const s = {
-  page: { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#f4f4f4", fontFamily: "sans-serif" },
-  card: { backgroundColor: "#fff", padding: "40px", width: "380px", border: "1px solid #ccc" },
-  title: { margin: "0 0 8px 0", fontSize: "20px", color: "#0f172a" },
-  sub: { margin: "0 0 28px 0", fontSize: "13px", color: "#64748b", lineHeight: "1.5" },
-  form: { display: "flex", flexDirection: "column" },
-  label: { fontSize: "13px", fontWeight: "600", color: "#0f172a", marginBottom: "6px" },
-  input: { padding: "10px", marginBottom: "18px", border: "1px solid #ccc", fontSize: "14px", outline: "none" },
-  error: { color: "#dc2626", fontSize: "13px", marginBottom: "12px" },
-  btn: { padding: "11px", backgroundColor: "#0f172a", color: "#fff", border: "none", fontSize: "15px", cursor: "pointer", fontWeight: "600" },
-};

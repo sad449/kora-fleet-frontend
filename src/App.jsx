@@ -58,17 +58,7 @@ export default function App() {
             <ProtectedRoute><Users /></ProtectedRoute>
           } />
 
-          <Route path="/vehicles" element={
-            <ProtectedRoute><ComingSoon title="Vehicles" /></ProtectedRoute>
-          } />
-
-          <Route path="/drivers" element={
-            <ProtectedRoute><ComingSoon title="Drivers" /></ProtectedRoute>
-          } />
-
-          <Route path="/trips" element={
-            <ProtectedRoute><ComingSoon title="Trips" /></ProtectedRoute>
-          } />
+        
 
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>

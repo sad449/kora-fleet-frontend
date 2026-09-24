@@ -1,125 +1,118 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import {
+  LayoutDashboard, Users, Car, UserCheck, Map,
+  LogOut, ChevronRight
+} from "lucide-react";
 
-export default function Layout({ children }) {
+const NAV = {
+  1: [
+    { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
+    { label: "Users", path: "/users", icon: Users },
+  ],
+  2: [
+    { label: "Dashboard", path: "/manager", icon: LayoutDashboard },
+    { label: "Vehicles", path: "/vehicles", icon: Car },
+    { label: "Drivers", path: "/drivers", icon: UserCheck },
+    { label: "Trips", path: "/trips", icon: Map },
+  ],
+  3: [
+    { label: "Dashboard", path: "/management", icon: LayoutDashboard },
+  ],
+  4: [
+    { label: "Dashboard", path: "/driver", icon: LayoutDashboard },
+  ],
+};
+
+export default function Layout({ children, title = "" }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const adminLinks = [
-    { label: "Dashboard", path: "/dashboard" },
-    { label: "Users", path: "/users" },
-  ];
-
-  const managerLinks = [
-    { label: "Dashboard", path: "/manager" },
-    { label: "Vehicles", path: "/vehicles" },
-    { label: "Drivers", path: "/drivers" },
-    { label: "Trips", path: "/trips" },
-  ];
-
-  const managementLinks = [
-    { label: "Dashboard", path: "/management" },
-  ];
-
-  const driverLinks = [
-    { label: "Dashboard", path: "/driver" },
-  ];
-
-  function getLinks() {
-    if (!user) return [];
-    if (user.role_id === 1) return adminLinks;
-    if (user.role_id === 2) return managerLinks;
-    if (user.role_id === 3) return managementLinks;
-    if (user.role_id === 4) return driverLinks;
-    return [];
-  }
+  const links = NAV[user?.role_id] || [];
+  const initials = user?.full_name
+    ? user.full_name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()
+    : "?";
 
   return (
-    <div style={s.shell}>
-      <div style={s.sidebar}>
-        <div style={s.logoWrap}>
-          <img src="/logo.jpeg" alt="Kora Fleet" style={s.logo} />
-        </div>
-        <p style={s.brand}>KORA FLEET</p>
-        {getLinks().map(link => (
-          <button
-            key={link.path}
-            type="button"
-            onClick={() => navigate(link.path)}
-            style={s.navBtn}
-          >
-            {link.label}
-          </button>
-        ))}
-        <div style={s.spacer} />
-        <button type="button" onClick={logout} style={s.logoutBtn}>
-          Log out
-        </button>
-      </div>
+    <div className="flex min-h-screen bg-slate-50 font-sans">
 
-      <div style={s.body}>
-        <div style={s.topbar}>
-          <span style={s.whoami}>
-            {user?.full_name || user?.email}
-          </span>
+      {/* Sidebar */}
+      <aside className="fixed top-0 left-0 h-screen w-60 bg-slate-900 flex flex-col z-50">
+
+        {/* Logo */}
+        <div className="px-5 py-5 border-b border-white/[0.06]">
+          <div className="flex items-center gap-3">
+            <img
+              src="/logo.jpeg"
+              alt="Kora Fleet"
+              className="w-8 h-8 rounded-lg object-contain"
+            />
+            <div>
+              <p className="text-white text-sm font-bold tracking-tight">Kora Fleet</p>
+              <p className="text-slate-500 text-[10px]">Fleet Management</p>
+            </div>
+          </div>
         </div>
-        <div style={s.content}>
+
+        {/* Nav links */}
+        <nav className="flex-1 px-3 py-4 flex flex-col gap-1 overflow-y-auto">
+          {links.map(({ label, path, icon: Icon }) => {
+            const active = location.pathname === path;
+            return (
+              <button
+                key={path}
+                type="button"
+                onClick={() => navigate(path)}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium w-full text-left transition-all duration-150
+                  ${active
+                    ? "bg-blue-600/20 text-blue-400"
+                    : "text-slate-400 hover:bg-white/[0.06] hover:text-slate-200"
+                  }`}
+              >
+                <Icon size={16} strokeWidth={2} />
+                {label}
+                {active && <ChevronRight size={14} className="ml-auto text-blue-400" />}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Bottom — user info + logout */}
+        <div className="px-3 py-4 border-t border-white/[0.06]">
+          <div className="flex items-center gap-3 px-3 py-2 mb-1">
+            <div className="w-8 h-8 rounded-full bg-blue-600/20 flex items-center justify-center text-blue-400 text-xs font-bold flex-shrink-0">
+              {initials}
+            </div>
+            <span className="text-slate-300 text-xs font-medium truncate">
+              {user?.full_name || user?.email}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={logout}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-500 hover:bg-red-500/10 hover:text-red-400 w-full text-left transition-all duration-150"
+          >
+            <LogOut size={15} strokeWidth={2} />
+            Sign out
+          </button>
+        </div>
+      </aside>
+
+      {/* Main content */}
+      <div className="flex-1 ml-60 flex flex-col min-h-screen">
+
+        {/* Topbar */}
+        <header className="sticky top-0 z-40 bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between">
+          <h1 className="text-base font-semibold text-slate-900">{title}</h1>
+          <span className="text-sm text-slate-400">{user?.full_name || user?.email}</span>
+        </header>
+
+        {/* Page content */}
+        <main className="flex-1 p-8">
           {children}
-        </div>
+        </main>
       </div>
     </div>
   );
 }
-
-const s = {
-  shell: { display: "flex", minHeight: "100vh", fontFamily: "sans-serif" },
-  sidebar: {
-    width: "210px",
-    backgroundColor: "#0f172a",
-    padding: "20px 16px",
-    display: "flex",
-    flexDirection: "column",
-    gap: "4px",
-    flexShrink: 0,
-  },
-  logoWrap: { marginBottom: "12px", display: "flex", justifyContent: "center" },
-  logo: { width: "70px", height: "70px", objectFit: "contain" },
-  brand: {
-    color: "#94a3b8",
-    fontSize: "11px",
-    fontWeight: "700",
-    letterSpacing: "1.5px",
-    margin: "0 0 16px 0",
-    textAlign: "center",
-  },
-  navBtn: {
-    padding: "10px 14px",
-    backgroundColor: "transparent",
-    color: "#e2e8f0",
-    border: "none",
-    cursor: "pointer",
-    textAlign: "left",
-    fontSize: "14px",
-  },
-  spacer: { flex: 1 },
-  logoutBtn: {
-    padding: "10px 14px",
-    backgroundColor: "transparent",
-    color: "#94a3b8",
-    border: "1px solid #334155",
-    cursor: "pointer",
-    textAlign: "left",
-    fontSize: "13px",
-    marginTop: "8px",
-  },
-  body: { flex: 1, display: "flex", flexDirection: "column", backgroundColor: "#f8fafc" },
-  topbar: {
-    padding: "14px 32px",
-    backgroundColor: "#ffffff",
-    borderBottom: "1px solid #e2e8f0",
-    display: "flex",
-    justifyContent: "flex-end",
-  },
-  whoami: { fontSize: "14px", color: "#475569" },
-  content: { flex: 1, padding: "32px" },
-};
