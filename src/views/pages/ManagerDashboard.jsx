@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Car, UserCheck, Map, TrendingUp, LayoutDashboard } from "lucide-react";
 import Layout from "../../components/Layout";
+import Vehicles from "./Vehicles";
 
 const TABS = {
   dashboard: "Dashboard",
@@ -70,7 +71,7 @@ export default function ManagerDashboard() {
 
   function renderContent() {
     if (active === "dashboard") return <DashboardContent />;
-    if (active === "vehicles") return <ComingSoon title="Vehicles" icon={Car} />;
+    if (active === "vehicles") return <Vehicles />;  
     if (active === "drivers") return <ComingSoon title="Drivers" icon={UserCheck} />;
     if (active === "trips") return <ComingSoon title="Trips" icon={Map} />;
   }
